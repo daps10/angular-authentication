@@ -7,13 +7,13 @@ import { EventService } from '../services/event.service'
 })
 export class SpecialEventsComponent implements OnInit {
 
-  specialEvents = [];
+  specialEvents:any = [];
   constructor(private _eventService:EventService) { }
 
   ngOnInit(): void {
     this._eventService.getSpecialEvents()
       .subscribe(
-        res => this.specialEvents = res,
+        res => this.specialEvents = res.data,
         err => console.log(err)
       )
   }
