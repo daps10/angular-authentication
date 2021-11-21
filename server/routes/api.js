@@ -1,4 +1,6 @@
 const express = require("express")
+const jwt = require("jsonwebtoken")
+
 const router = express.Router();
 
 const User = require("../models/user");
@@ -15,6 +17,23 @@ mongoose.connect(db, err => {
     }
 })  
 
+function verifyToken(req, res,next){
+    if(!req.headers.authorization){
+        res.status(401).send("Unauthorized request")
+    }
+    let token = req.headers.authorization.split(' ')[1];
+    if(token === "null") {
+        res.status(401).send("Unauthorized request")
+    }
+    let payload = jwt.verify(token, 'secretKey')
+
+    if(!payload) {
+        res.status(401).send("Unauthorized request")
+    } 
+    req.userId = payload.subject
+    next();
+}
+
 router.get("/", (req,res) => {
     res.send("From API module")
 })
@@ -30,7 +49,11 @@ router.post("/register", (req, res) => {
         if(err){
             console.log(err)
         } else {
-            res.status(200).send({status:true,message:"Signup successful!", data:registeredUser});            
+            let payload = { subject:registeredUser._id }
+
+            let token = jwt.sign(payload, 'secretKey')
+
+            res.status(200).send({status:true,message:"Signup successful!", data:{payload}});            
         }
     });
 });
@@ -49,7 +72,10 @@ router.post("/login", (req,res) => {
                 if(userData.password !== user.password){
                     res.status(401).send({status:false,message:"Invalid password"});
                 }else {
-                    res.status(200).send({status:true,message:"Login successfully!",data:user})
+                    let payload = { subject:user._id }
+                    let token = jwt.sign( payload, 'secretKey' )
+                    
+                    res.status(200).send({status:true,message:"Login successfully!",data:{token}})
                 }
             }
         }
@@ -79,7 +105,7 @@ router.get("/events", (req,res) => {
     });
 });
 
-router.get("/special_events", (req,res) => {
+router.get("/special_events",verifyToken, (req,res) => {
 
     Event.find({eventType:"Special"}, (err, result) => {
         if(err){
